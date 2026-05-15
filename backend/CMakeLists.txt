@@ -25,6 +25,16 @@ file(GLOB_RECURSE SOURCES
     "src/*.cc"
 )
 
+# Generate drogon controller registration
+execute_process(
+    COMMAND drogon_ctl create controller * -o ./src/controllers
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE DROGON_CTL_RESULT
+)
+if(NOT DROGON_CTL_RESULT EQUAL 0)
+    message(WARNING "drogon_ctl create controller failed, but continuing...")
+endif()
+
 # Add executable
 add_executable(sophon-stream-web ${SOURCES})
 

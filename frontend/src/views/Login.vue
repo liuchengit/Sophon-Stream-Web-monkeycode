@@ -74,7 +74,7 @@ const handleLogin = async () => {
     try {
       await authStore.login(loginForm.username, loginForm.password)
       ElMessage.success('登录成功')
-      router.push('/dashboard')
+      router.push('/#/dashboard')
     } catch {
       ElMessage.error('用户名或密码错误')
     } finally {

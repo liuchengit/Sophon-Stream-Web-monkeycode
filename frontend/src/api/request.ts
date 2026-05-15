@@ -34,9 +34,17 @@ service.interceptors.response.use(
       const { status, data } = error.response
       switch (status) {
         case 401:
-          ElMessage.error('认证失败，请重新登录')
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          // Only redirect if not already on login page
+          const currentPath = window.location.hash
+          if (!currentPath.includes('/login')) {
+            ElMessage.error('认证失败，请重新登录')
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = '/#/login'
+          } else {
+            // On login page, let the component handle the error
+            ElMessage.error(data?.message || '认证失败')
+          }
           break
         case 403:
           ElMessage.error('权限不足')

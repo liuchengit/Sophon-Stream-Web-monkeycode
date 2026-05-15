@@ -21,6 +21,7 @@
 #include "models/entities.h"
 #include "websocket/websocket_manager.h"
 #include <nlohmann/json.hpp>
+#include <drogon/drogon.h>
 
 using namespace drogon;
 using namespace sophon::web::middleware;
@@ -447,6 +448,56 @@ int main() {
     // Register middlewares
     drogon::app().registerMiddleware(std::make_shared<AuthMiddleware>());
     drogon::app().registerMiddleware(std::make_shared<RBACMiddleware>());
+
+    // Register auth handlers
+    drogon::app().registerHandler("/api/v1/auth/login",
+        [](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
+            auto jsonPtr = req->getJsonObject();
+            if (!jsonPtr) {
+                nlohmann::json error = {{"code", 400}, {"message", "Invalid request body"}};
+                auto resp = drogon::HttpResponse::newHttpJsonResponse(toCppJson(error));
+                resp->setStatusCode(drogon::k400BadRequest);
+                callback(resp);
+                return;
+            }
+
+            std::string username = (*jsonPtr)["username"].asString();
+            std::string password = (*jsonPtr)["password"].asString();
+
+            auto token = sophon::web::auth::AuthService::instance().login(username, password);
+            if (!token) {
+                nlohmann::json error = {{"code", 401}, {"message", "Invalid username or password"}};
+                auto resp = drogon::HttpResponse::newHttpJsonResponse(toCppJson(error));
+                resp->setStatusCode(drogon::k401Unauthorized);
+                callback(resp);
+                return;
+            }
+
+            nlohmann::json response = {
+                {"code", 0},
+                {"message", "success"},
+                {"data", {
+                    {"token", *token},
+                    {"user", {
+                        {"id", 1},
+                        {"username", username},
+                        {"role", "admin"}
+                    }}
+                }}
+            };
+
+            auto resp = drogon::HttpResponse::newHttpJsonResponse(toCppJson(response));
+            callback(resp);
+        },
+        {Post});
+
+    drogon::app().registerHandler("/api/v1/auth/logout",
+        [](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
+            nlohmann::json response = {{"code", 0}, {"message", "success"}};
+            auto resp = drogon::HttpResponse::newHttpJsonResponse(toCppJson(response));
+            callback(resp);
+        },
+        {Post});
 
     // Register workflow handlers
     drogon::app().registerHandler("/api/v1/workflows",
